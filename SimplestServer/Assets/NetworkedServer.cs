@@ -14,6 +14,9 @@ public class NetworkedServer : MonoBehaviour
     int hostID;
     int socketPort = 5491;
 
+    List<PlayerAccount> playerAccounts;
+    string saveDataPath;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -23,7 +26,10 @@ public class NetworkedServer : MonoBehaviour
         unreliableChannelID = config.AddChannel(QosType.Unreliable);
         HostTopology topology = new HostTopology(config, maxConnections);
         hostID = NetworkTransport.AddHost(topology, socketPort, null);
-        
+
+        playerAccounts = new List<PlayerAccount>();
+        saveDataPath = Application.dataPath + Path.DirectorySeparatorChar + "playerAccountData.txt";
+        LoadAccountData();
     }
 
     // Update is called once per frame
@@ -57,17 +63,120 @@ public class NetworkedServer : MonoBehaviour
         }
 
     }
-  
+
     public void SendMessageToClient(string msg, int id)
     {
         byte error = 0;
         byte[] buffer = Encoding.Unicode.GetBytes(msg);
         NetworkTransport.Send(hostID, id, reliableChannelID, buffer, msg.Length * sizeof(char), out error);
     }
-    
+
     private void ProcessRecievedMsg(string msg, int id)
     {
-        Debug.Log("msg recieved = " + msg + ".  connection id = " + id);
+        Debug.Log("msg received = " + msg + ".  connection id = " + id + " frame: " + Time.frameCount);
+
+        string[] cvs = msg.Split(',');
+
+        int signifier = int.Parse(cvs[0]);
+        string n = cvs[1];
+        string p = cvs[2];
+
+        if (signifier == ClientToServerSignifiers.CreateAccount)
+        {
+            bool nameIsInUse = searchAccountsByName(n, out PlayerAccount temp);
+            if (nameIsInUse)
+            {
+                SendMessageToClient(ServerToClientSignifiers.AccountCreationFailed + ", name already in use", id);
+            }
+            else
+            {
+                SaveNewUser(new PlayerAccount(n, p));
+                SendMessageToClient(ServerToClientSignifiers.AccountCreated + ",Account created", id);
+            }
+        }
+        else if (signifier == ClientToServerSignifiers.Login)
+        {
+            PlayerAccount accountToCheck = null;
+
+            if (accountToCheck == null)
+                SendMessageToClient(ServerToClientSignifiers.LoginFailed + "," + "could not find user", id);
+            else if (p == accountToCheck.password)
+                //login
+                SendMessageToClient(ServerToClientSignifiers.LoginComplete + "," + "Logging in", id);
+            else //incorrect password
+                SendMessageToClient(ServerToClientSignifiers.LoginFailed + "," + "incorrect password", id);
+
+        }
+
     }
 
+    private bool searchAccountsByName(string name, out PlayerAccount account)
+    {
+        bool nameIsInUse = false;
+        account = null;
+        foreach (PlayerAccount pa in playerAccounts)
+        {
+            if (name == pa.name)
+            {
+                nameIsInUse = true;
+                account = pa;
+                break;
+            }
+        }
+
+        return nameIsInUse;
+    }
+
+    private void SaveNewUser(PlayerAccount newPlayerAccount)
+    {
+        playerAccounts.Add(newPlayerAccount);
+
+        StreamWriter sw = new StreamWriter(saveDataPath, true);
+        sw.Close();
+    }
+
+    private void LoadAccountData()
+    {
+        if (Directory.Exists(saveDataPath) == false)
+            return;
+
+        string line = "";
+        StreamReader sr = new StreamReader(saveDataPath);
+        while ((line = sr.ReadLine()) != null)
+        {
+            string[] cvs = line.Split(',');
+            playerAccounts.Add(new PlayerAccount(cvs[0], cvs[1]));
+        }
+    }
+}
+
+
+public static class ClientToServerSignifiers
+{
+    public const int CreateAccount = 1;
+    public const int Login = 2;
+}
+
+public static class ServerToClientSignifiers
+{
+    public const int LoginComplete = 1;
+    public const int LoginFailed = 2;
+
+    public const int AccountCreated = 3;
+    public const int AccountCreationFailed = 4;
+}
+
+
+public class PlayerAccount
+{
+    public string name, password;
+
+    public PlayerAccount()
+    {
+    }
+    public PlayerAccount(string name, string password)
+    {
+        this.name = name;
+        this.password = password;
+    }
 }
