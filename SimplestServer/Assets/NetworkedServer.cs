@@ -12,10 +12,10 @@ public class NetworkedServer : MonoBehaviour
     int reliableChannelID;
     int unreliableChannelID;
     int hostID;
-    int socketPort = 54912;
+    int socketPort = 5491;
 
     List<PlayerAccount> playerAccounts;
-    string saveDataPath;
+    string playerAccountsFilePath;
 
     int playerWaitingForMatchWithId = -1;
 
@@ -31,12 +31,15 @@ public class NetworkedServer : MonoBehaviour
         HostTopology topology = new HostTopology(config, maxConnections);
         hostID = NetworkTransport.AddHost(topology, socketPort, null);
 
+        playerAccounts = new List<PlayerAccount>();
+        playerAccountsFilePath = Application.dataPath + Path.DirectorySeparatorChar + "PlayerAccounts.txt";
+        LoadAccountData();
+        gameRooms = new LinkedList<GameRoom>();
     }
 
     // Update is called once per frame
     void Update()
     {
-
         int recHostID;
         int recConnectionID;
         int recChannelID;
@@ -75,9 +78,7 @@ public class NetworkedServer : MonoBehaviour
     private void ProcessRecievedMsg(string msg, int id)
     {
         Debug.Log("msg received = " + msg + ".  connection id = " + id + " frame: " + Time.frameCount);
-
         string[] csv = msg.Split(',');
-
         int signifier = int.Parse(csv[0]);
 
         if (signifier == ClientToServerSignifiers.CreateAccount)
@@ -114,7 +115,7 @@ public class NetworkedServer : MonoBehaviour
         }
         else if (signifier == ClientToServerSignifiers.JoinGameRoomQueue)
         {
-            Debug.Log("client is waiting to join game");
+            Debug.Log("waiting to join match");
             if (playerWaitingForMatchWithId == -1)
             {
                 playerWaitingForMatchWithId = id;
@@ -183,7 +184,7 @@ public class NetworkedServer : MonoBehaviour
     {
         playerAccounts.Add(newPlayerAccount);
 
-        StreamWriter sw = new StreamWriter(saveDataPath, true);
+        StreamWriter sw = new StreamWriter(playerAccountsFilePath, true);
         foreach (PlayerAccount pa in playerAccounts)
         {
             sw.WriteLine(pa.name + "," + pa.password);
@@ -193,11 +194,11 @@ public class NetworkedServer : MonoBehaviour
 
     private void LoadAccountData()
     {
-        if (File.Exists(saveDataPath) == false)
+        if (File.Exists(playerAccountsFilePath) == false)
             return;
 
         string line = "";
-        StreamReader sr = new StreamReader(saveDataPath);
+        StreamReader sr = new StreamReader(playerAccountsFilePath);
         while ((line = sr.ReadLine()) != null)
         {
             string[] cvs = line.Split(',');
@@ -229,37 +230,6 @@ public class NetworkedServer : MonoBehaviour
     }
 }
 
-
-public static class ClientToServerSignifiers
-{
-    public const int CreateAccount = 1;
-    public const int Login = 2;
-    public const int JoinGameRoomQueue = 3;
-    public const int SelectedTicTacToeSquare = 4;
-
-    public const int WonTicTacToe = 5;
-    public const int GameTied = 6;
-    public const int LeavingGameRoom = 7;
-}
-
-public static class ServerToClientSignifiers
-{
-    public const int LoginComplete = 1;
-    public const int LoginFailed = 2;
-
-    public const int AccountCreated = 3;
-    public const int AccountCreationFailed = 4;
-
-    public const int GameStart = 5;
-
-    public const int ChosenAsPlayerOne = 6;
-    public const int OpponentChoseASquare = 7;
-    public const int OpponentLeftRoomEarly = 8;
-    public const int OpponentWonTicTacToe = 9;
-    public const int GameTied = 10;
-}
-
-
 public class PlayerAccount
 {
     public string name, password;
@@ -273,7 +243,6 @@ public class PlayerAccount
         this.password = password;
     }
 }
-
 public class GameRoom
 {
     public int playerId1, playerId2;
@@ -283,4 +252,30 @@ public class GameRoom
         playerId1 = id1;
         playerId2 = id2;
     }
+}
+
+public static class ClientToServerSignifiers
+{
+    public const int CreateAccount = 1;
+    public const int Login = 2;
+    public const int JoinGameRoomQueue = 3;
+    public const int SelectedTicTacToeSquare = 4;
+
+    public const int WonTicTacToe = 5;
+    public const int GameTied = 6;
+    public const int LeavingGameRoom = 7;
+}
+public static class ServerToClientSignifiers
+{
+    public const int LoginComplete = 1;
+    public const int LoginFailed = 2;
+    public const int AccountCreated = 3;
+    public const int AccountCreationFailed = 4;
+
+    public const int GameStart = 5;
+    public const int ChosenAsPlayerOne = 6;
+    public const int OpponentChoseASquare = 7;
+    public const int OpponentLeftRoomEarly = 8;
+    public const int OpponentWonTicTacToe = 9;
+    public const int GameTied = 10;
 }
