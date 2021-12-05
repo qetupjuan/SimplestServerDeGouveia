@@ -20,6 +20,8 @@ public class NetworkedServer : MonoBehaviour
     int playerWaitingForMatchWithId = -1;
 
     LinkedList<GameRoom> gameRooms;
+    LinkedList<PlayerAccount> loggedInPlayerAccounts;
+    GameRoom gr;
 
     // Start is called before the first frame update
     void Start()
@@ -257,25 +259,39 @@ public class GameRoom
 public static class ClientToServerSignifiers
 {
     public const int CreateAccount = 1;
-    public const int Login = 2;
-    public const int JoinGameRoomQueue = 3;
-    public const int SelectedTicTacToeSquare = 4;
 
-    public const int WonTicTacToe = 5;
-    public const int GameTied = 6;
-    public const int LeavingGameRoom = 7;
+    public const int LoginAccount = 2;
+
+    public const int JoinQueue = 3;
+
+    public const int GameButtonPressed = 4;
+
+    public const int ChatMessageSent = 5;
+
+    public const int JoinAsObserver = 6;
+
+    public const int LeaveRoom = 7;
+
+    public const int GetReplay = 8;
 }
-public static class ServerToClientSignifiers
+
+public static class ServertoClientSignifiers
 {
     public const int LoginComplete = 1;
+
     public const int LoginFailed = 2;
-    public const int AccountCreated = 3;
+
+    public const int AccountCreationComplete = 3;
+
     public const int AccountCreationFailed = 4;
 
-    public const int GameStart = 5;
-    public const int ChosenAsPlayerOne = 6;
-    public const int OpponentChoseASquare = 7;
-    public const int OpponentLeftRoomEarly = 8;
-    public const int OpponentWonTicTacToe = 9;
-    public const int GameTied = 10;
+    public const int OpponentPlay = 5;
+
+    public const int GameStart = 6;
+
+    public const int SendChatMessage = 7;
+
+    public const int BackToMainMenu = 8;
+
+    public const int SendReplay = 9;
 }
