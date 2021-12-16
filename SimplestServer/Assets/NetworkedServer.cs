@@ -16,9 +16,7 @@ public class NetworkedServer : MonoBehaviour
     LinkedList<PlayerAccount> playerAccounts;
 
     const int PlayerAccountRecord = 1;
-
     string playerAccountDataPath;
-
     int playerWaitinginQueueID = -1;
 
     LinkedList<GameRoom> gameRooms;
@@ -37,20 +35,16 @@ public class NetworkedServer : MonoBehaviour
         config.DisconnectTimeout = 3000;
 
         playerAccounts = new LinkedList<PlayerAccount>();
-
-        playerAccountDataPath = Application.dataPath + Path.DirectorySeparatorChar + "PlayerAccounts.txt";
+        playerAccountDataPath = Application.dataPath + Path.DirectorySeparatorChar + "LoginTrack.txt";
 
         LoadPlayerAccount();
-
         gameRooms = new LinkedList<GameRoom>();
-
         loggedInPlayerAccounts = new LinkedList<PlayerAccount>();
     }
 
     // Update is called once per frame
     void Update()
     {
-
         int recHostID;
         int recConnectionID;
         int recChannelID;
@@ -86,11 +80,9 @@ public class NetworkedServer : MonoBehaviour
                         break;
                     }
                 }
-
                 Debug.Log("Disconnection, " + recConnectionID);
                 break;
         }
-
     }
 
     public void SendMessageToClient(string msg, int id)
@@ -103,9 +95,7 @@ public class NetworkedServer : MonoBehaviour
     private void ProcessRecievedMsg(string msg, int id)
     {
         Debug.Log("msg recieved = " + msg + ".  connection id = " + id);
-
         string[] csv = msg.Split(',');
-
         int signifier = int.Parse(csv[0]);
 
         bool errorFound = false;
@@ -293,7 +283,6 @@ public class NetworkedServer : MonoBehaviour
         if (File.Exists(playerAccountDataPath))
         {
             StreamReader sr = new StreamReader(playerAccountDataPath);
-
             string line;
 
             while ((line = sr.ReadLine()) != null)
@@ -386,7 +375,6 @@ public class GameRoom
         {
             sw.WriteLine(action);
         }
-
         sw.Close();
     }
 
@@ -415,39 +403,24 @@ public class GameRoom
 public static class ClientToServerSignifiers
 {
     public const int CreateAccount = 1;
-
     public const int LoginAccount = 2;
-
     public const int JoinQueue = 3;
-
     public const int GameButtonPressed = 4;
-
     public const int ChatMessageSent = 5;
-
     public const int JoinAsObserver = 6;
-
     public const int LeaveRoom = 7;
-
     public const int GetReplay = 8;
 }
 
 public static class ServertoClientSignifiers
 {
     public const int LoginComplete = 1;
-
     public const int LoginFailed = 2;
-
     public const int AccountCreationComplete = 3;
-
     public const int AccountCreationFailed = 4;
-
     public const int OpponentPlay = 5;
-
     public const int GameStart = 6;
-
     public const int SendChatMessage = 7;
-
     public const int BackToMainMenu = 8;
-
     public const int SendReplay = 9;
 }
