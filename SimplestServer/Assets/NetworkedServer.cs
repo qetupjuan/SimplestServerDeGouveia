@@ -160,7 +160,8 @@ public class NetworkedServer : MonoBehaviour
                 {
                     gr = gameRooms.First.Value;
                     gr.observerIDs.Add(id);
-                    SendMessageToClient(ServertoClientSignifiers.GameStart + "," + gr.player1ID + "," + gr.player2ID + "," + gr.startingPlayer + "," + id, id);
+                    SendMessageToClient(ServertoClientSignifiers.GameStart + gr.startingPlayer + "," + id, id);
+                    //SendMessageToClient(ServertoClientSignifiers.GameStart + "," + gr.firstPlayer + "," + gr.secondPlayer + "," + gr.startingPlayer + "," + id, id);
                     if (gr.turnNum > 0)
                     {
                         string[] temp = gr.LoadReplay();
@@ -178,7 +179,7 @@ public class NetworkedServer : MonoBehaviour
                 gr = GetGameRoomWithClientID(id);
                 gr.RemovePlayer(id);
 
-                if (gr.player1ID == 0 && gr.player2ID == 0)
+                if (gr.firstPlayer == 0 && gr.secondPlayer == 0)
                 {
                     foreach (int obs in gr.observerIDs)
                     {
@@ -219,8 +220,8 @@ public class NetworkedServer : MonoBehaviour
             }
 
             gameRooms.AddLast(gr);
-            SendMessageToClient(ServertoClientSignifiers.GameStart + "," + gr.player1ID + "," + gr.player2ID + "," + gr.startingPlayer + "," + id, gr.player1ID);
-            SendMessageToClient(ServertoClientSignifiers.GameStart + "," + gr.player2ID + "," + gr.player1ID + "," + gr.startingPlayer + "," + id, gr.player2ID);
+            SendMessageToClient(ServertoClientSignifiers.GameStart + "," + gr.firstPlayer + "," + gr.secondPlayer + "," + gr.startingPlayer + "," + id, gr.firstPlayer);
+            SendMessageToClient(ServertoClientSignifiers.GameStart + "," + gr.secondPlayer + "," + gr.firstPlayer + "," + gr.startingPlayer + "," + id, gr.secondPlayer);
             playerWaitinginQueueID = -1;
         }
     }
@@ -234,8 +235,8 @@ public class NetworkedServer : MonoBehaviour
             gr.turnNum++;
             gr.SaveReplay(csv);
 
-            SendMessageToClient(ServertoClientSignifiers.OpponentPlay + "," + slot + "," + csv[2], gr.player2ID);
-            SendMessageToClient(ServertoClientSignifiers.OpponentPlay + "," + slot + "," + csv[2], gr.player1ID);
+            SendMessageToClient(ServertoClientSignifiers.OpponentPlay + "," + slot + "," + csv[2], gr.secondPlayer);
+            SendMessageToClient(ServertoClientSignifiers.OpponentPlay + "," + slot + "," + csv[2], gr.firstPlayer);
             foreach (int observer in gr.observerIDs)
             {
                 SendMessageToClient(ServertoClientSignifiers.OpponentPlay + "," + slot + "," + csv[2], observer);
@@ -247,23 +248,40 @@ public class NetworkedServer : MonoBehaviour
     {
         gr = GetGameRoomWithClientID(id);
         PlayerAccount tempPA = null;
+        string msg = csv[1];
 
+        SendMessageToClient(ServertoClientSignifiers.SendChatMessage + "," + msg, 1);
+        SendMessageToClient(ServertoClientSignifiers.SendChatMessage + "," + msg, 2);
+        Debug.Log(gr.firstPlayer);
+        Debug.Log(gr.secondPlayer);
+        foreach (int observer in gr.observerIDs)
+        {
+            SendMessageToClient(ServertoClientSignifiers.SendChatMessage + "," + msg, observer);
+        }
         foreach (PlayerAccount pa in loggedInPlayerAccounts)
         {
             if (pa.connectionID == id)
             {
                 tempPA = pa;
+                //string msg = csv[1];
+                //
+                //SendMessageToClient(ServertoClientSignifiers.SendChatMessage + "," + tempPA.name + "," + msg, gr.player1ID);
+                //SendMessageToClient(ServertoClientSignifiers.SendChatMessage + "," + tempPA.name + "," + msg, gr.player2ID);
+                //foreach (int observer in gr.observerIDs)
+                //{
+                //    SendMessageToClient(ServertoClientSignifiers.SendChatMessage + "," + tempPA.name + "," + msg, observer);
+                //}
                 break;
             }
         }
-        string msg = csv[1];
-
-        SendMessageToClient(ServertoClientSignifiers.SendChatMessage + "," + tempPA.name + "," + msg, gr.player1ID);
-        SendMessageToClient(ServertoClientSignifiers.SendChatMessage + "," + tempPA.name + "," + msg, gr.player2ID);
-        foreach (int observer in gr.observerIDs)
-        {
-            SendMessageToClient(ServertoClientSignifiers.SendChatMessage + "," + tempPA.name + "," + msg, observer);
-        }
+        //string msg = csv[1];
+        //
+        //SendMessageToClient(ServertoClientSignifiers.SendChatMessage + "," + tempPA.name + "," + msg, gr.player1ID);
+        //SendMessageToClient(ServertoClientSignifiers.SendChatMessage + "," + tempPA.name + "," + msg, gr.player2ID);
+        //foreach (int observer in gr.observerIDs)
+        //{
+        //    SendMessageToClient(ServertoClientSignifiers.SendChatMessage + "," + tempPA.name + "," + msg, observer);
+        //}
     }
 
     private void SavePlayerAccount()
@@ -306,7 +324,7 @@ public class NetworkedServer : MonoBehaviour
     {
         foreach (GameRoom gr in gameRooms)
         {
-            if (gr.player1ID == id || gr.player2ID == id)
+            if (gr.firstPlayer == id || gr.secondPlayer == id)
                 return gr;
             foreach (int obs in gr.observerIDs)
             {
@@ -332,22 +350,22 @@ public class PlayerAccount
 
 public class GameRoom
 {
-    public int player1ID, player2ID;
+    public int firstPlayer, secondPlayer;
     public List<int> observerIDs;
     public int startingPlayer;
     public List<PlayerAccount> playerAccounts;
     public int turnNum;
     public List<string> replayActions;
 
-    public GameRoom(int Player1ID, int Player2ID)
+    public GameRoom(int FirstPlayer, int SecondPlayer)
     {
-        player1ID = Player1ID;
-        player2ID = Player2ID;
+        firstPlayer = FirstPlayer;
+        secondPlayer = SecondPlayer;
         int temp = Random.Range(1, 3);
         if (temp == 1)
-            startingPlayer = player1ID;
+            startingPlayer = firstPlayer;
         else
-            startingPlayer = player2ID;
+            startingPlayer = secondPlayer;
 
         observerIDs = new List<int>();
         playerAccounts = new List<PlayerAccount>();
@@ -357,10 +375,10 @@ public class GameRoom
 
     public void RemovePlayer(int removedplayerID)
     {
-        if (removedplayerID == player1ID)
-            player1ID = 0;
-        else if (removedplayerID == player2ID)
-            player2ID = 0;
+        if (removedplayerID == firstPlayer)
+            firstPlayer = 0;
+        else if (removedplayerID == secondPlayer)
+            secondPlayer = 0;
         else
         {
             observerIDs.Remove(removedplayerID);
