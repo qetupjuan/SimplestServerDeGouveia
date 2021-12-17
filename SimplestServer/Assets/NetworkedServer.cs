@@ -13,14 +13,14 @@ public class NetworkedServer : MonoBehaviour
     int unreliableChannelID;
     int hostID;
     int socketPort = 5491;
-    LinkedList<PlayerAccount> playerAccounts;
+    LinkedList<LoginTrack> playerAccounts;
 
     const int PlayerAccountRecord = 1;
     string playerAccountDataPath;
     int playerWaitinginQueueID = -1;
 
     LinkedList<GameRoom> gameRooms;
-    LinkedList<PlayerAccount> loggedInPlayerAccounts;
+    LinkedList<LoginTrack> loggedInPlayerAccounts;
     GameRoom gr;
 
     // Start is called before the first frame update
@@ -34,12 +34,12 @@ public class NetworkedServer : MonoBehaviour
         hostID = NetworkTransport.AddHost(topology, socketPort, null);
         config.DisconnectTimeout = 3000;
 
-        playerAccounts = new LinkedList<PlayerAccount>();
+        playerAccounts = new LinkedList<LoginTrack>();
         playerAccountDataPath = Application.dataPath + Path.DirectorySeparatorChar + "LoginTrack.txt";
 
         LoadPlayerAccount();
         gameRooms = new LinkedList<GameRoom>();
-        loggedInPlayerAccounts = new LinkedList<PlayerAccount>();
+        loggedInPlayerAccounts = new LinkedList<LoginTrack>();
     }
 
     // Update is called once per frame
@@ -72,7 +72,7 @@ public class NetworkedServer : MonoBehaviour
                     playerWaitinginQueueID = -1;
                     Debug.Log(playerWaitinginQueueID);
                 }
-                foreach (PlayerAccount pa in loggedInPlayerAccounts)
+                foreach (LoginTrack pa in loggedInPlayerAccounts)
                 {
                     if (pa.connectionID == recConnectionID)
                     {
@@ -103,7 +103,7 @@ public class NetworkedServer : MonoBehaviour
         {
             case ClientToServerSignifiers.CreateAccount:
 
-                foreach (PlayerAccount account in playerAccounts)
+                foreach (LoginTrack account in playerAccounts)
                 {
                     if (csv[1] == account.name)
                     {
@@ -113,7 +113,7 @@ public class NetworkedServer : MonoBehaviour
                 }
                 if (!errorFound)
                 {
-                    PlayerAccount pa = new PlayerAccount(csv[1], csv[2]);
+                    LoginTrack pa = new LoginTrack(csv[1], csv[2]);
                     playerAccounts.AddLast(pa);
                     SendMessageToClient(ServertoClientSignifiers.AccountCreationComplete + "", id);
 
@@ -122,7 +122,7 @@ public class NetworkedServer : MonoBehaviour
                 break;
             case ClientToServerSignifiers.LoginAccount:
 
-                foreach (PlayerAccount account in playerAccounts)
+                foreach (LoginTrack account in playerAccounts)
                 {
                     if (csv[1] == account.name)
                     {
@@ -140,20 +140,21 @@ public class NetworkedServer : MonoBehaviour
                     SendMessageToClient(ServertoClientSignifiers.LoginFailed + "", id);
                 }
                 break;
-            case ClientToServerSignifiers.JoinQueue:
-
-                JoinQueue(id);
-
-                break;
             case ClientToServerSignifiers.GameButtonPressed:
 
                 GameButtonPressed(id, csv);
+                break;
+            case ClientToServerSignifiers.JoinQueue:
 
+                JoinQueue(id);
+                break;
+            case ClientToServerSignifiers.PlayerMove:
+
+                PlayerMadeMove(id, csv);
                 break;
             case ClientToServerSignifiers.ChatMessageSent:
 
                 ChatMessageSent(id, csv);
-
                 break;
             case ClientToServerSignifiers.JoinAsObserver:
                 if (gameRooms.First.Value != null)
@@ -211,11 +212,11 @@ public class NetworkedServer : MonoBehaviour
         {
             gr = new GameRoom(playerWaitinginQueueID, id);
 
-            foreach (PlayerAccount pa in loggedInPlayerAccounts)
+            foreach (LoginTrack pa in loggedInPlayerAccounts)
             {
                 if (pa.connectionID == playerWaitinginQueueID || pa.connectionID == id)
                 {
-                    gr.playerAccounts.Add(pa);
+                    gr.loginTrack.Add(pa);
                 }
             }
 
@@ -235,8 +236,8 @@ public class NetworkedServer : MonoBehaviour
             gr.turnNum++;
             gr.SaveReplay(csv);
 
-            SendMessageToClient(ServertoClientSignifiers.OpponentPlay + "," + slot + "," + csv[2], gr.secondPlayer);
-            SendMessageToClient(ServertoClientSignifiers.OpponentPlay + "," + slot + "," + csv[2], gr.firstPlayer);
+            SendMessageToClient(ServertoClientSignifiers.OpponentPlay + "," + slot + "," + csv[2], 2);
+            SendMessageToClient(ServertoClientSignifiers.OpponentPlay + "," + slot + "," + csv[1], 1);
             foreach (int observer in gr.observerIDs)
             {
                 SendMessageToClient(ServertoClientSignifiers.OpponentPlay + "," + slot + "," + csv[2], observer);
@@ -247,48 +248,40 @@ public class NetworkedServer : MonoBehaviour
     private void ChatMessageSent(int id, string[] csv)
     {
         gr = GetGameRoomWithClientID(id);
-        PlayerAccount tempPA = null;
+        LoginTrack tempPA = null;
         string msg = csv[1];
 
         SendMessageToClient(ServertoClientSignifiers.SendChatMessage + "," + msg, 1);
         SendMessageToClient(ServertoClientSignifiers.SendChatMessage + "," + msg, 2);
-        Debug.Log(gr.firstPlayer);
-        Debug.Log(gr.secondPlayer);
         foreach (int observer in gr.observerIDs)
         {
             SendMessageToClient(ServertoClientSignifiers.SendChatMessage + "," + msg, observer);
         }
-        foreach (PlayerAccount pa in loggedInPlayerAccounts)
+        foreach (LoginTrack pa in loggedInPlayerAccounts)
         {
             if (pa.connectionID == id)
             {
                 tempPA = pa;
-                //string msg = csv[1];
-                //
-                //SendMessageToClient(ServertoClientSignifiers.SendChatMessage + "," + tempPA.name + "," + msg, gr.player1ID);
-                //SendMessageToClient(ServertoClientSignifiers.SendChatMessage + "," + tempPA.name + "," + msg, gr.player2ID);
-                //foreach (int observer in gr.observerIDs)
-                //{
-                //    SendMessageToClient(ServertoClientSignifiers.SendChatMessage + "," + tempPA.name + "," + msg, observer);
-                //}
                 break;
             }
         }
-        //string msg = csv[1];
-        //
-        //SendMessageToClient(ServertoClientSignifiers.SendChatMessage + "," + tempPA.name + "," + msg, gr.player1ID);
-        //SendMessageToClient(ServertoClientSignifiers.SendChatMessage + "," + tempPA.name + "," + msg, gr.player2ID);
-        //foreach (int observer in gr.observerIDs)
-        //{
-        //    SendMessageToClient(ServertoClientSignifiers.SendChatMessage + "," + tempPA.name + "," + msg, observer);
-        //}
+    }
+
+    private void PlayerMadeMove(int id, string[] csv)
+    {
+        gr = GetGameRoomWithClientID(id);
+        LoginTrack tempPA = null;
+        string msg = csv[1];
+
+        SendMessageToClient(ServertoClientSignifiers.PlayerMove + ",X", 1);
+        SendMessageToClient(ServertoClientSignifiers.PlayerMove + ",O", 2);
     }
 
     private void SavePlayerAccount()
     {
         StreamWriter sw = new StreamWriter(playerAccountDataPath);
 
-        foreach (PlayerAccount pa in playerAccounts)
+        foreach (LoginTrack pa in playerAccounts)
         {
             sw.WriteLine(PlayerAccountRecord + "," + pa.name + "," + pa.password);
         }
@@ -311,11 +304,10 @@ public class NetworkedServer : MonoBehaviour
 
                 if (signifier == PlayerAccountRecord)
                 {
-                    PlayerAccount pa = new PlayerAccount(csv[1], csv[2]);
+                    LoginTrack pa = new LoginTrack(csv[1], csv[2]);
                     playerAccounts.AddLast(pa);
                 }
             }
-
             sr.Close();
         }
     }
@@ -336,12 +328,12 @@ public class NetworkedServer : MonoBehaviour
     }
 }
 
-public class PlayerAccount
+public class LoginTrack
 {
     public string name, password;
 
     public int connectionID;
-    public PlayerAccount(string Name, string Password)
+    public LoginTrack(string Name, string Password)
     {
         name = Name;
         password = Password;
@@ -353,7 +345,7 @@ public class GameRoom
     public int firstPlayer, secondPlayer;
     public List<int> observerIDs;
     public int startingPlayer;
-    public List<PlayerAccount> playerAccounts;
+    public List<LoginTrack> loginTrack;
     public int turnNum;
     public List<string> replayActions;
 
@@ -368,7 +360,7 @@ public class GameRoom
             startingPlayer = secondPlayer;
 
         observerIDs = new List<int>();
-        playerAccounts = new List<PlayerAccount>();
+        loginTrack = new List<LoginTrack>();
         replayActions = new List<string>();
         turnNum = 0;
     }
@@ -428,6 +420,7 @@ public static class ClientToServerSignifiers
     public const int JoinAsObserver = 6;
     public const int LeaveRoom = 7;
     public const int GetReplay = 8;
+    public const int PlayerMove = 9;
 }
 
 public static class ServertoClientSignifiers
@@ -441,4 +434,5 @@ public static class ServertoClientSignifiers
     public const int SendChatMessage = 7;
     public const int BackToMainMenu = 8;
     public const int SendReplay = 9;
+    public const int PlayerMove = 10;
 }
