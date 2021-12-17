@@ -235,15 +235,31 @@ public class NetworkedServer : MonoBehaviour
             gr.turnNum++;
             gr.SaveReplay(csv);
 
-            SendMessageToClient(ServertoClientSignifiers.OpponentPlay + "," + slot + "," + csv[2], 2);
-            SendMessageToClient(ServertoClientSignifiers.OpponentPlay + "," + slot + "," + csv[1], 1);
+            if (id == 1)
+            {
+            SendMessageToClient(ServertoClientSignifiers.OpponentPlay + "," + slot + "," + 1, 2);
+            SendMessageToClient(ServertoClientSignifiers.OpponentPlay + "," + slot + "," + 2, 1);
+            }
+            else
+            {
+            SendMessageToClient(ServertoClientSignifiers.OpponentPlay + "," + slot + "," + 2, 2);
+            SendMessageToClient(ServertoClientSignifiers.OpponentPlay + "," + slot + "," + 1, 1);
+            }
             foreach (int observer in gr.observerIDs)
             {
                 SendMessageToClient(ServertoClientSignifiers.OpponentPlay + "," + slot + "," + csv[2], observer);
             }
         }
     }
+    private void PlayerMadeMove(int id, string[] csv)
+    {
+        gr = GetGameRoomWithClientID(id);
+        LoginTrack tempTrack = null;
+        string msg = csv[1];
 
+        SendMessageToClient(ServertoClientSignifiers.PlayerMove + ",X", 1);
+        SendMessageToClient(ServertoClientSignifiers.PlayerMove + ",O", 2);
+    }
     private void ChatMessageSent(int id, string[] csv)
     {
         gr = GetGameRoomWithClientID(id);
@@ -264,16 +280,6 @@ public class NetworkedServer : MonoBehaviour
                 break;
             }
         }
-    }
-
-    private void PlayerMadeMove(int id, string[] csv)
-    {
-        gr = GetGameRoomWithClientID(id);
-        LoginTrack tempTrack = null;
-        string msg = csv[1];
-
-        SendMessageToClient(ServertoClientSignifiers.PlayerMove + ",X", 1);
-        SendMessageToClient(ServertoClientSignifiers.PlayerMove + ",O", 2);
     }
 
     private void SavePlayerAccount()
