@@ -113,10 +113,9 @@ public class NetworkedServer : MonoBehaviour
                 }
                 if (!errorFound)
                 {
-                    LoginTrack pa = new LoginTrack(csv[1], csv[2]);
-                    playerAccounts.AddLast(pa);
+                    LoginTrack lt = new LoginTrack(csv[1], csv[2]);
+                    playerAccounts.AddLast(lt);
                     SendMessageToClient(ServertoClientSignifiers.AccountCreationComplete + "", id);
-
                     SavePlayerAccount();
                 }
                 break;
@@ -170,7 +169,7 @@ public class NetworkedServer : MonoBehaviour
                         {
                             string[] line = action.Split(',');
                             if (line[0] != null)
-                                SendMessageToClient(ServertoClientSignifiers.SendReplay + "," + line[0] + "," + line[1] + "," + 1, id);
+                            SendMessageToClient(ServertoClientSignifiers.SendReplay + "," + line[0] + "," + line[1] + "," + 1, id);
                             //SendMessageToClient(ServertoClientSignifiers.SendReplay + "," + line[0] + "," + 1, id);
                         }
                     }
@@ -248,7 +247,7 @@ public class NetworkedServer : MonoBehaviour
     private void ChatMessageSent(int id, string[] csv)
     {
         gr = GetGameRoomWithClientID(id);
-        LoginTrack tempPA = null;
+        LoginTrack tempTrack = null;
         string msg = csv[1];
 
         SendMessageToClient(ServertoClientSignifiers.SendChatMessage + "," + msg, 1);
@@ -257,11 +256,11 @@ public class NetworkedServer : MonoBehaviour
         {
             SendMessageToClient(ServertoClientSignifiers.SendChatMessage + "," + msg, observer);
         }
-        foreach (LoginTrack pa in loggedInPlayerAccounts)
+        foreach (LoginTrack lt in loggedInPlayerAccounts)
         {
-            if (pa.connectionID == id)
+            if (lt.connectionID == id)
             {
-                tempPA = pa;
+                tempTrack = lt;
                 break;
             }
         }
@@ -270,7 +269,7 @@ public class NetworkedServer : MonoBehaviour
     private void PlayerMadeMove(int id, string[] csv)
     {
         gr = GetGameRoomWithClientID(id);
-        LoginTrack tempPA = null;
+        LoginTrack tempTrack = null;
         string msg = csv[1];
 
         SendMessageToClient(ServertoClientSignifiers.PlayerMove + ",X", 1);
@@ -281,9 +280,9 @@ public class NetworkedServer : MonoBehaviour
     {
         StreamWriter sw = new StreamWriter(playerAccountDataPath);
 
-        foreach (LoginTrack pa in playerAccounts)
+        foreach (LoginTrack lt in playerAccounts)
         {
-            sw.WriteLine(PlayerAccountRecord + "," + pa.name + "," + pa.password);
+            sw.WriteLine(PlayerAccountRecord + "," + lt.name + "," + lt.password);
         }
 
         sw.Close();
@@ -299,13 +298,12 @@ public class NetworkedServer : MonoBehaviour
             while ((line = sr.ReadLine()) != null)
             {
                 string[] csv = line.Split(',');
-
                 int signifier = int.Parse(csv[0]);
 
                 if (signifier == PlayerAccountRecord)
                 {
-                    LoginTrack pa = new LoginTrack(csv[1], csv[2]);
-                    playerAccounts.AddLast(pa);
+                    LoginTrack lt = new LoginTrack(csv[1], csv[2]);
+                    playerAccounts.AddLast(lt);
                 }
             }
             sr.Close();
@@ -321,7 +319,7 @@ public class NetworkedServer : MonoBehaviour
             foreach (int obs in gr.observerIDs)
             {
                 if (obs == id)
-                    return gr;
+                return gr;
             }
         }
         return null;
@@ -343,11 +341,11 @@ public class LoginTrack
 public class GameRoom
 {
     public int firstPlayer, secondPlayer;
-    public List<int> observerIDs;
     public int startingPlayer;
-    public List<LoginTrack> loginTrack;
     public int turnNum;
+    public List<int> observerIDs;
     public List<string> replayActions;
+    public List<LoginTrack> loginTrack;
 
     public GameRoom(int FirstPlayer, int SecondPlayer)
     {
